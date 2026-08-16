@@ -10,6 +10,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "dialkit": "^1.4.3",
     "react": "latest",
     "react-dom": "latest"

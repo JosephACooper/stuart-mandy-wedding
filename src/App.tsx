@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { DialRoot, DialTimeline, useDialKit, useDialTimeline } from 'dialkit'
 import 'dialkit/styles.css'
+import { RsvpModal } from './components/RsvpModal'
+import { RsvpResults } from './components/RsvpResults'
 
 const ITINERARY = [
   {
@@ -89,6 +91,7 @@ function VenueSection({ id, title, name, address, copy, image }: { id: string, t
 }
 
 function WeddingSite() {
+  const [rsvpOpen, setRsvpOpen] = useState(false)
   return (
     <main className="site-shell">
       <div className="paper-surface">
@@ -146,9 +149,10 @@ function WeddingSite() {
         <section className="rsvp-section" id="rsvp">
           <SectionTitle variant="rsvp">RSVP</SectionTitle>
           <p className="section-intro">Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.</p>
-          <a className="button button--solid" href="mailto:hello@example.com?subject=Wedding%20RSVP">RSVP here</a>
+          <button type="button" className="button button--solid" onClick={() => setRsvpOpen(true)}>RSVP here</button>
         </section>
       </div>
+      {rsvpOpen && <RsvpModal onClose={() => setRsvpOpen(false)} />}
     </main>
   )
 }
@@ -399,6 +403,9 @@ function WeddingExperience() {
 }
 
 export default function App() {
-  const isAnimationLab = new URLSearchParams(window.location.search).has('animationLab')
+  const params = new URLSearchParams(window.location.search)
+  const isAnimationLab = params.has('animationLab')
+  const isRsvpResults = params.has('rsvps')
+  if (isRsvpResults) return <RsvpResults />
   return isAnimationLab ? <AnimationLab /> : <WeddingExperience />
 }
