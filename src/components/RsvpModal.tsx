@@ -9,7 +9,7 @@ type FieldName = 'guestName' | 'attending' | 'partySize' | 'guestNames' | 'dieta
 export function RsvpModal({ onClose }: { onClose: () => void }) {
   const [guestName, setGuestName] = useState('')
   const [attending, setAttending] = useState<Attending>('')
-  const [partySize, setPartySize] = useState(1)
+  const [partySize, setPartySize] = useState('1')
   const [guestNames, setGuestNames] = useState('')
   const [dietaryRequirements, setDietaryRequirements] = useState('')
   const [songRequest, setSongRequest] = useState('')
@@ -77,7 +77,8 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
     if (!guestName.trim()) errors.guestName = 'Please enter your name.'
     else if (guestName.trim().length > 200) errors.guestName = 'That name is a little too long.'
     if (!attending) errors.attending = 'Please let us know if you can make it.'
-    if (attending === 'yes' && (!Number.isInteger(partySize) || partySize < 1 || partySize > 10)) errors.partySize = 'Enter a number between 1 and 10.'
+    const numericPartySize = Number(partySize)
+    if (attending === 'yes' && (partySize === '' || !Number.isInteger(numericPartySize) || numericPartySize < 1 || numericPartySize > 10)) errors.partySize = 'Enter a number between 1 and 10.'
     if (guestNames.length > 500) errors.guestNames = 'Please keep this under 500 characters.'
     if (dietaryRequirements.length > 1000) errors.dietaryRequirements = 'Please keep this under 1000 characters.'
     if (songRequest.length > 300) errors.songRequest = 'Please keep this under 300 characters.'
@@ -111,7 +112,7 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
     const { error } = await supabase.from('rsvps').insert({
       guest_name: guestName.trim(),
       attending: attending === 'yes',
-      party_size: attending === 'yes' ? partySize : 1,
+      party_size: attending === 'yes' ? Number(partySize) : 1,
       guest_names: attending === 'yes' && guestNames.trim() ? guestNames.trim() : null,
       dietary_requirements: attending === 'yes' && dietaryRequirements.trim() ? dietaryRequirements.trim() : null,
       song_request: attending === 'yes' && songRequest.trim() ? songRequest.trim() : null,
@@ -170,7 +171,7 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
               {attending === 'yes' && <>
                 <label className="rsvp-field">
                   <span>Number in your party</span>
-                  <input ref={partySizeRef} type="number" min={1} max={10} value={partySize} onChange={(event) => setPartySize(Number(event.target.value))} aria-invalid={Boolean(fieldErrors.partySize)} />
+                  <input ref={partySizeRef} type="number" inputMode="numeric" min={1} max={10} step={1} value={partySize} onChange={(event) => setPartySize(event.target.value)} aria-invalid={Boolean(fieldErrors.partySize)} />
                   {fieldErrors.partySize && <small className="rsvp-field__error">{fieldErrors.partySize}</small>}
                 </label>
                 <label className="rsvp-field">
