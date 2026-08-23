@@ -21,3 +21,11 @@ Open `http://localhost:5173/?animationLab=1` to scrub and tune the opening seque
 pnpm lint
 pnpm build
 ```
+
+## Supabase keep-alive
+
+The scheduled GitHub workflow calls a read-only `keep_alive()` database
+function every six hours so the free Supabase project remains active during
+quiet RSVP periods. The workflow requires the repository secret
+`SUPABASE_PUBLISHABLE_KEY`. The function is defined in `supabase/migrations`
+and does not access or modify RSVP data.

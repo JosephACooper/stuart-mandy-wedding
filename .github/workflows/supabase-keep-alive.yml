@@ -1,0 +1,29 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Four small requests per day, at an offset to avoid peak scheduler load.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call the read-only heartbeat
+        env:
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --request POST \
+            --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            https://fpfljnfxrulmwgtgjdqw.supabase.co/rest/v1/rpc/keep_alive
