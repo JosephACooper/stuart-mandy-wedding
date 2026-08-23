@@ -1,38 +1,122 @@
-import { useEffect, useState } from 'react'
-import { DialRoot, DialTimeline, useDialKit, useDialTimeline } from 'dialkit'
+import { useEffect, useRef, useState } from 'react'
+import { DialRoot, DialTimeline, useDialKit, useDialKitController, useDialTimeline } from 'dialkit'
 import 'dialkit/styles.css'
 import { RsvpModal } from './components/RsvpModal'
 import { RsvpResults } from './components/RsvpResults'
 
-const ITINERARY = [
+type ItineraryItem = {
+  time: string
+  title: string
+  body: string
+}
+
+const CEREMONY_ITINERARY: ItineraryItem[] = [
   {
-    time: '2pm',
-    title: 'Guests arrive',
-    body: 'Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.',
+    time: '2:00pm',
+    title: 'Guests arrive and park',
+    body: 'Please allow a little extra time to find considerate parking within Stogursey and make your way to the church.',
   },
   {
     time: '2:45pm',
     title: 'Guests seated',
-    body: 'Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.',
+    body: 'Please take your seats in St Andrew’s Church so the ceremony can begin promptly.',
   },
   {
-    time: '3pm',
-    title: 'Wedding ceremony begins',
-    body: 'Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.',
-    extraTitle: 'Item Title',
+    time: '3:00pm',
+    title: 'Wedding ceremony',
+    body: 'Stuart and Mandy exchange vows at St Andrew’s Church.',
+  },
+  {
+    time: '3:45pm',
+    title: 'Confetti and photographs',
+    body: 'The ceremony finish is provisional; we’ll confirm this timing when the final order of service is agreed.',
+  },
+]
+
+const RECEPTION_ITINERARY: ItineraryItem[] = [
+  {
+    time: '4:00pm',
+    title: 'Travel to Greenway Farm',
+    body: 'Please allow approximately 20 minutes for the drive. Sunset is around 4:25pm, so the journey will be around dusk.',
+  },
+  {
+    time: '4:30pm',
+    title: 'Reception drinks',
+    body: 'Join us for a drink on arrival at Greenway Farm. This start time is provisional until the ceremony schedule is confirmed.',
+  },
+  {
+    time: 'To be confirmed',
+    title: 'Dinner, speeches and dancing',
+    body: 'We’re still refining the evening timings with our families and suppliers.',
   },
 ]
 
 const STAYS = [
-  { title: 'Cannington House', image: '/assets/stay-1.png', body: 'Feugiat pretium egestas enim blandit purus euismod. Feugiat magna aliquam lectus lectus eu amet. Eros, accumsan purus enim nascetur quam diam felis, fringilla varius.' },
-  { title: 'Gothelney Farm', image: '/assets/stay-2.png', body: 'Nec laoreet tristique orci viverra sed aliquam. Amet odio ornare fermentum amet adipiscing malesuada turpis diam augue. Eget enim ultrices etiam nibh at porta.' },
-  { title: 'Model Farm', image: '/assets/stay-3.png', body: 'Cras rhoncus malesuada eget vitae eleifend. Sodales purus et aliquam diam, nascetur at habitant. A, vel, donec at commodo eu non ac interdum.' },
-  { title: 'The Old Vicarage', image: '/assets/stay-4.png', body: 'Feugiat pretium egestas enim blandit purus euismod. Feugiat magna aliquam lectus lectus eu amet. Eros, accumsan purus enim nascetur quam diam felis, fringilla varius.' },
-  { title: 'Blackmore Farm', image: '/assets/stay-5.png', body: 'Nec laoreet tristique orci viverra sed aliquam. Amet odio ornare fermentum amet adipiscing malesuada turpis diam augue. Eget enim ultrices etiam nibh at porta.' },
-  { title: 'The Priory', image: '/assets/stay-6.png', body: 'Cras rhoncus malesuada eget vitae eleifend. Sodales purus et aliquam diam, nascetur at habitant. A, vel, donec at commodo eu non ac interdum.' },
-  { title: 'Gurney Manor Mill', image: '/assets/stay-7.png', body: 'Feugiat pretium egestas enim blandit purus euismod. Feugiat magna aliquam lectus lectus eu amet. Eros, accumsan purus enim nascetur quam diam felis, fringilla varius.' },
-  { title: 'Blackmore Farm', image: '/assets/stay-8.png', body: 'Nec laoreet tristique orci viverra sed aliquam. Amet odio ornare fermentum amet adipiscing malesuada turpis diam augue. Eget enim ultrices etiam nibh at porta.' },
+  {
+    title: 'Cannington House',
+    image: '/assets/stay-1.png',
+    href: 'https://www.canningtonhouse.co.uk/',
+    body: 'A beautifully restored, Grade II listed Georgian house in the centre of Cannington. This intimate B&B has two luxury en-suite rooms, a half-acre walled garden, private parking and EV charging.',
+  },
+  {
+    title: 'Gothelney Farm',
+    image: '/assets/stay-2.png',
+    href: 'https://www.gothelneyfarmer.co.uk/accommodation',
+    body: 'A characterful and cosy stay at the heart of a working agroecological farm in nearby Charlynch. A lovely choice for guests drawn to quiet countryside, local food and a slower pace.',
+  },
+  {
+    title: 'Model Farm',
+    image: '/assets/stay-3.png',
+    href: 'https://www.modelfarm.com/',
+    body: 'A generous Victorian country house near Wembdon, available for groups of 10–21 guests. Eleven bedrooms, ten bathrooms and four acres of gardens make it especially well suited to families sharing.',
+  },
+  {
+    title: 'The Old Vicarage',
+    image: '/assets/stay-4.png',
+    href: 'https://theoldvicaragebridgwater.com/',
+    body: 'An award-winning, dog-friendly hotel in a 15th-century Grade II listed building in central Bridgwater. Its 18 individually styled en-suite rooms are joined by a restaurant, bar and walled garden.',
+  },
+  {
+    title: 'Blackmore Farm',
+    image: '/assets/stay-5.png',
+    href: 'https://blackmorefarm.co.uk/',
+    body: 'A remarkable 15th-century, Grade I listed manor at the foot of the Quantocks. Stay in period rooms or converted barns, then gather for a locally sourced breakfast around the Great Hall’s long oak table.',
+  },
+  {
+    title: 'The Priory',
+    image: '/assets/stay-6.png',
+    href: 'https://www.booking.com/hotel/gb/the-priory-cannington.en-gb.html',
+    body: 'A small, beautifully restored B&B in an 18th-century Grade II listed house. It sits opposite Cannington’s Walled Gardens, with village pubs close by and the Quantock Hills a short drive away.',
+  },
+  {
+    title: 'Gurney Manor Mill',
+    image: '/assets/stay-7.png',
+    href: 'https://gurneymill.co.uk/',
+    body: 'A lovingly restored 15th-century watermill with four en-suite rooms and a boutique holiday cottage. Its stream, waterfall and water-meadow views feel wonderfully rural, yet Cannington is a five-minute walk.',
+  },
+  {
+    title: 'The Bower Inn',
+    image: '/assets/stay-8.png',
+    href: 'https://butcombe.com/the-bower-inn-somerset/',
+    body: 'A relaxed 18th-century pub and hotel on the edge of the Somerset Levels. Fifteen modern-country en-suite rooms, seasonal dining and a large courtyard garden make this an easy all-round option.',
+  },
 ]
+
+const MOBILE_FOOTER_TIMING = {
+  botanicalDelay: 100,
+  buttonDelay: 520,
+  completeDelay: 750,
+}
+
+const MOBILE_FOOTER_FLOWERS = ['one', 'two', 'three'] as const
+
+// Set to true to restore the sticky mobile RSVP experiment and its tuning controls.
+const MOBILE_FOOTER_EXPERIMENT_ENABLED = false
+
+const ENVELOPE_FIT = {
+  paperSeatDepth: 8,
+  bottomClipGuard: 4,
+}
 
 function Botanical({ variant, className = '' }: { variant: 'wide' | 'tall', className?: string }) {
   return <div aria-hidden="true" className={`botanical botanical--${variant} ${className}`}><img src="/assets/botanical.png" alt="" /></div>
@@ -41,7 +125,7 @@ function Botanical({ variant, className = '' }: { variant: 'wide' | 'tall', clas
 function SealHalf({ side }: { side: 'left' | 'right' }) {
   return (
     <span className={`seal-half seal-half--${side}`} aria-hidden="true">
-      <img src="/assets/wax-seal.png" alt="" />
+      <span className="wax-seal-art" />
     </span>
   )
 }
@@ -56,16 +140,15 @@ function SectionTitle({ children, variant = 'stay' }: { children: React.ReactNod
   )
 }
 
-function Itinerary() {
+function Itinerary({ items }: { items: ItineraryItem[] }) {
   return (
     <div className="itinerary">
-      {ITINERARY.map((item) => (
-        <article className="itinerary-row" key={item.time}>
+      {items.map((item) => (
+        <article className="itinerary-row" key={`${item.time}-${item.title}`}>
           <p className="time">{item.time}</p>
           <div>
             <h3>{item.title}</h3>
             <p>{item.body}</p>
-            {item.extraTitle && <><h3>{item.extraTitle}</h3><p>{item.body}</p></>}
           </div>
         </article>
       ))}
@@ -73,7 +156,7 @@ function Itinerary() {
   )
 }
 
-function VenueSection({ id, title, name, address, copy, image }: { id: string, title: string, name: string, address: string, copy: React.ReactNode, image: string }) {
+function VenueSection({ id, title, name, address, copy, image, itinerary, itineraryNote }: { id: string, title: string, name: string, address: string, copy: React.ReactNode, image: string, itinerary?: ItineraryItem[], itineraryNote?: string }) {
   return (
     <section id={id} className="venue-section">
       <SectionTitle variant="large">{title}</SectionTitle>
@@ -85,17 +168,64 @@ function VenueSection({ id, title, name, address, copy, image }: { id: string, t
         </div>
         <img className="venue-image" src={image} alt="" />
       </div>
-      <Itinerary />
+      {itinerary && <Itinerary items={itinerary} />}
+      {itineraryNote && <p className="itinerary-note">{itineraryNote}</p>}
     </section>
   )
 }
 
-function WeddingSite() {
+function MobileFooterCta({ onClick, showFlowers }: { onClick: () => void, showFlowers: boolean }) {
+  const endSentinelRef = useRef<HTMLSpanElement>(null)
+  const [stage, setStage] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 3 : 0)
+  const [atPageEnd, setAtPageEnd] = useState(false)
+
+  /* ─────────────────────────────────────────────────────────
+   * MOBILE FOOTER STORYBOARD
+   *
+   *   0ms   fixed footer waits just below the viewport edge
+   * 100ms   three botanical stems fade and rise into place
+   * 520ms   translucent RSVP pill quickly fades into place
+   * 750ms   composition settles; it yields at the page end
+   * ───────────────────────────────────────────────────────── */
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timers: number[] = []
+    timers.push(window.setTimeout(() => setStage(1), MOBILE_FOOTER_TIMING.botanicalDelay))
+    timers.push(window.setTimeout(() => setStage(2), MOBILE_FOOTER_TIMING.buttonDelay))
+    timers.push(window.setTimeout(() => setStage(3), MOBILE_FOOTER_TIMING.completeDelay))
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!endSentinelRef.current) return
+    const observer = new IntersectionObserver(([entry]) => setAtPageEnd(entry.isIntersecting), {
+      rootMargin: '0px 0px 24px',
+      threshold: 0,
+    })
+    observer.observe(endSentinelRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <>
+      <span ref={endSentinelRef} className="mobile-footer-sentinel" aria-hidden="true" />
+      <aside className={`mobile-footer-cta mobile-footer-cta--stage-${stage} ${showFlowers ? '' : 'mobile-footer-cta--without-flowers'} ${atPageEnd ? 'mobile-footer-cta--at-end' : ''}`} aria-label="RSVP shortcut">
+        {showFlowers && MOBILE_FOOTER_FLOWERS.map((flower) => <Botanical key={flower} variant="tall" className={`mobile-footer-flora mobile-footer-flora--${flower}`} />)}
+        <button type="button" onClick={onClick}>RSVP <span aria-hidden="true">→</span></button>
+      </aside>
+    </>
+  )
+}
+
+function WeddingSite({ footerCtaEnabled = false, footerFlowersEnabled = true, mobileHeroRsvp = false }: { footerCtaEnabled?: boolean, footerFlowersEnabled?: boolean, mobileHeroRsvp?: boolean }) {
   const [rsvpOpen, setRsvpOpen] = useState(false)
+
   return (
     <main className="site-shell">
       <div className="paper-surface">
-        <header className="hero" id="top">
+        <header className={`hero ${mobileHeroRsvp ? 'hero--mobile-rsvp' : ''}`} id="top">
           <nav aria-label="Wedding navigation">
             <a href="#wedding">Wedding</a>
             <a href="#reception">Reception</a>
@@ -108,7 +238,7 @@ function WeddingSite() {
             <h1>Stuart &amp; Mandy</h1>
             <p className="date">Saturday, 14th November</p>
             <p className="location">Stogursey, Somerset</p>
-            <a className="button button--outline" href="#rsvp">RSVP</a>
+            <button className="button button--outline" type="button" onClick={() => setRsvpOpen(true)}>RSVP</button>
           </div>
           <img className="hero-image" src="/assets/hero-photo.png" alt="A hand-drawn country house and bridge" />
         </header>
@@ -116,48 +246,68 @@ function WeddingSite() {
         <VenueSection
           id="wedding"
           title="The wedding"
-          name="St Andrews Church"
+          name="St Andrew’s Church"
           address="4 Church St, Stogursey, Bridgwater TA5 1TQ"
-          copy={<><p>The wedding will take place at...</p><p>Parking can be found...</p></>}
+          copy={<><p>The ceremony will take place at St Andrew’s Church in the heart of Stogursey. Parking immediately outside the church is very limited, so please allow a little extra time and park considerately within the village. We are also confirming overflow parking at Stogursey Victory Hall on Tower Hill, a short walk from the church.</p><p>Limited accessible parking is available immediately outside the church.</p></>}
           image="/assets/church-photo.png"
+          itinerary={CEREMONY_ITINERARY}
         />
 
         <VenueSection
           id="reception"
           title="The reception"
-          name="Greenway farm"
-          address="Skimmerton Ln, Wembdon, Bridgwater, TA5 2AX"
-          copy={<p>Lorem ipsum...</p>}
+          name="Greenway Farm"
+          address="Skimmerton Lane, Wembdon, TA5 2AX"
+          copy={<p>After the ceremony, celebrations will continue at Greenway Farm in Wembdon. Please allow approximately 20 minutes for the drive from Stogursey. The farm is reached from the A39 via Skimmerton Lane, beside the service station between Bridgwater and Cannington. We recommend arranging lifts or pre-booking a taxi in advance.</p>}
           image="/assets/reception-photo.png"
+          itinerary={RECEPTION_ITINERARY}
+          itineraryNote="Timings from the end of the ceremony onward remain subject to confirmation."
         />
 
         <section className="stay-section" id="stay">
           <SectionTitle variant="stay">Where to stay</SectionTitle>
-          <p className="section-intro">Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.</p>
-          <div className="stay-grid">
+          <p className="section-intro">We’ve gathered a few places to stay in and around Cannington and Bridgwater for those who may be travelling, from small country B&amp;Bs to houses made for sharing.</p>
+          <div className="stay-grid" aria-label="Recommended accommodation">
             {STAYS.map((stay, index) => (
               <article className="stay-card" key={`${stay.title}-${index}`}>
-                <img src={stay.image} alt="" />
+                <img src={stay.image} alt={`${stay.title} exterior`} />
                 <h3>{stay.title}</h3>
                 <p>{stay.body}</p>
-                <a className="button button--outline" href="#rsvp">Button</a>
+                <a className="stay-link" href={stay.href} target="_blank" rel="noreferrer">
+                  Visit website <span aria-hidden="true">→</span>
+                </a>
               </article>
             ))}
           </div>
         </section>
 
+        <section className="note-section" aria-labelledby="little-note-title">
+          <SectionTitle variant="stay"><span id="little-note-title">A little note</span></SectionTitle>
+          <div className="note-grid">
+            <article>
+              <h3>Photographs</h3>
+              <p>Please take photographs! We won’t have an official photographer, so we’d love you to capture plenty of moments throughout the day and send us your favourites afterwards. It would mean so much to see the celebration through your eyes.</p>
+            </article>
+            <article>
+              <h3>No gifts, please</h3>
+              <p>Please don’t bring gifts — your presence really is more than enough. We’re simply looking forward to celebrating and sharing the day with you.</p>
+            </article>
+          </div>
+        </section>
+
         <section className="rsvp-section" id="rsvp">
           <SectionTitle variant="rsvp">RSVP</SectionTitle>
-          <p className="section-intro">Phasellus accumsan neque viverra ut sem aliquam purus rhoncus, morbi. Ut in eget leo dui nunc. Tortor viverra magna dignissim sit. Libero eu euismod risus, mauris etiam ut morbi amet in. Tortor duis dignissim adipiscing sem.</p>
-          <button type="button" className="button button--solid" onClick={() => setRsvpOpen(true)}>RSVP here</button>
+          <p className="section-intro">Please reply using the form below. You can confirm who is attending, share dietary requirements, request a song for the dance floor and leave us a message.</p>
+          <button className="button button--solid" type="button" onClick={() => setRsvpOpen(true)}>Reply to our invitation</button>
         </section>
+        {footerCtaEnabled && <MobileFooterCta showFlowers={footerFlowersEnabled} onClick={() => setRsvpOpen(true)} />}
       </div>
       {rsvpOpen && <RsvpModal onClose={() => setRsvpOpen(false)} />}
     </main>
   )
 }
 
-function AnimationLab({ productionMode = false, onComplete }: { productionMode?: boolean, onComplete?: () => void }) {
+function AnimationLab({ productionMode = false, mobileHeroRsvp = true, onComplete }: { productionMode?: boolean, mobileHeroRsvp?: boolean, onComplete?: () => void }) {
   const cleanMode = productionMode || new URLSearchParams(window.location.search).has('clean')
   const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
   const viewportWidth = viewport.width
@@ -180,7 +330,7 @@ function AnimationLab({ productionMode = false, onComplete }: { productionMode?:
   const envelopeHeight = envelopeWidth * 903 / 1280
   const envelopeTop = viewportHeight / 2 - (titleHeight + 16 + envelopeHeight) / 2 + titleHeight + 16
   const envelopePaperTop = envelopeTop + envelopeHeight * 20 / 903
-  const envelopeSeatDepth = 8
+  const envelopeSeatDepth = ENVELOPE_FIT.paperSeatDepth
   const foldTopHeight = Math.max(viewportHeight * .2, 150)
   const foldMiddleHeight = Math.max(viewportHeight * .4, envelopeHeight * .8 / nestedCardScale)
   const foldBottomHeight = Math.max(viewportHeight * .4, 240)
@@ -289,7 +439,7 @@ function AnimationLab({ productionMode = false, onComplete }: { productionMode?:
   const title = timeline.title.current
   const currentPaperY = nestedPaperY * (1 - paper.progress)
   const currentPaperScale = nestedCardScale + (1 - nestedCardScale) * paperScale.progress
-  const paperClipBottom = Math.max(0, viewportHeight - envelopeTop - envelopeHeight) * (1 - paperScale.progress)
+  const paperClipBottom = Math.max(0, viewportHeight - envelopeTop - envelopeHeight + ENVELOPE_FIT.bottomClipGuard) * (1 - paperScale.progress)
 
   return (
     <div className="animation-lab" style={{ '--lab-perspective': `${tuning.perspective}px`, '--lab-shadow': `${tuning.paperShadow}px` } as React.CSSProperties}>
@@ -314,17 +464,17 @@ function AnimationLab({ productionMode = false, onComplete }: { productionMode?:
         >
           <div className="lab-paper-panel lab-paper-panel--top" style={{ transform: `rotateX(${foldTwo.angle * tuning.foldDepth}deg)` }}>
             <div className="lab-paper-face lab-paper-face--front">
-              <div className="lab-paper-content lab-paper-content--one"><WeddingSite /></div>
+              <div className="lab-paper-content lab-paper-content--one"><WeddingSite mobileHeroRsvp={mobileHeroRsvp} /></div>
               <i className="lab-fold-shade" style={{ opacity: foldTwo.shade }} />
             </div>
             <div className="lab-paper-face lab-paper-face--back" />
           </div>
           <div className="lab-paper-panel lab-paper-panel--middle">
-            <div className="lab-paper-face lab-paper-face--front"><div className="lab-paper-content lab-paper-content--two"><WeddingSite /></div></div>
+            <div className="lab-paper-face lab-paper-face--front"><div className="lab-paper-content lab-paper-content--two"><WeddingSite mobileHeroRsvp={mobileHeroRsvp} /></div></div>
           </div>
           <div className="lab-paper-panel lab-paper-panel--bottom" style={{ transform: `rotateX(${foldThree.angle * tuning.foldDepth}deg)` }}>
             <div className="lab-paper-face lab-paper-face--front">
-              <div className="lab-paper-content lab-paper-content--three"><WeddingSite /></div>
+              <div className="lab-paper-content lab-paper-content--three"><WeddingSite mobileHeroRsvp={mobileHeroRsvp} /></div>
               <i className="lab-fold-shade" style={{ opacity: foldThree.shade }} />
             </div>
             <div className="lab-paper-face lab-paper-face--back" />
@@ -391,21 +541,33 @@ function AnimationLab({ productionMode = false, onComplete }: { productionMode?:
 
 function WeddingExperience() {
   const [introFinished, setIntroFinished] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const footerController = useDialKitController('Mobile footer', {
+    enabled: true,
+    flowers: true,
+  }, {
+    id: 'mobile-footer-cta-v1',
+    persist: true,
+  })
+  const mobileFooterEnabled = MOBILE_FOOTER_EXPERIMENT_ENABLED && footerController.values.enabled
 
   useEffect(() => {
     document.body.classList.toggle('intro-running', !introFinished)
     return () => document.body.classList.remove('intro-running')
   }, [introFinished])
 
-  return introFinished
-    ? <WeddingSite />
-    : <AnimationLab productionMode onComplete={() => setIntroFinished(true)} />
+  return <>
+    {introFinished
+      ? <WeddingSite footerCtaEnabled={mobileFooterEnabled} footerFlowersEnabled={footerController.values.flowers} mobileHeroRsvp={!mobileFooterEnabled} />
+      : <AnimationLab productionMode mobileHeroRsvp={!mobileFooterEnabled} onComplete={() => setIntroFinished(true)} />}
+    {introFinished && MOBILE_FOOTER_EXPERIMENT_ENABLED && <>
+      <DialRoot position="top-right" defaultOpen={false} productionEnabled />
+    </>}
+  </>
 }
 
 export default function App() {
   const params = new URLSearchParams(window.location.search)
   const isAnimationLab = params.has('animationLab')
-  const isRsvpResults = params.has('rsvps')
-  if (isRsvpResults) return <RsvpResults />
+  if (params.has('rsvps')) return <RsvpResults />
   return isAnimationLab ? <AnimationLab /> : <WeddingExperience />
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseConfigured } from '../lib/supabase'
 
 type Attending = '' | 'yes' | 'no'
 type Status = 'idle' | 'submitting' | 'success' | 'error'
@@ -19,7 +19,7 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({})
 
-  const panelRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const guestNameRef = useRef<HTMLInputElement>(null)
   const attendingRef = useRef<HTMLInputElement>(null)
   const partySizeRef = useRef<HTMLInputElement>(null)
@@ -31,7 +31,7 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     document.body.classList.add('rsvp-modal-open')
     const previouslyFocused = document.activeElement as HTMLElement | null
-    guestNameRef.current?.focus()
+    const focusTimer = window.setTimeout(() => guestNameRef.current?.focus(), 40)
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -39,10 +39,9 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
         return
       }
       if (event.key !== 'Tab' || !panelRef.current) return
-      const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>('button, input, textarea, [href], [tabindex]:not([tabindex="-1"])')
-      ).filter((el) => !el.hasAttribute('disabled'))
-      if (focusable.length === 0) return
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button, input, textarea, [href], [tabindex]:not([tabindex="-1"])'))
+        .filter((element) => !element.hasAttribute('disabled'))
+      if (!focusable.length) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
       if (event.shiftKey && document.activeElement === first) {
@@ -53,32 +52,17 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
         first.focus()
       }
     }
+
     document.addEventListener('keydown', handleKeyDown)
     return () => {
+      window.clearTimeout(focusTimer)
       document.body.classList.remove('rsvp-modal-open')
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [onClose])
 
-  function validate() {
-    const errors: Partial<Record<FieldName, string>> = {}
-    const trimmedName = guestName.trim()
-    if (!trimmedName) errors.guestName = 'Please enter your name.'
-    else if (trimmedName.length > 200) errors.guestName = 'That name is a little too long.'
-    if (attending !== 'yes' && attending !== 'no') errors.attending = 'Please let us know if you can make it.'
-    if (attending === 'yes' && (!Number.isInteger(partySize) || partySize < 1 || partySize > 10)) {
-      errors.partySize = 'Enter a number between 1 and 10.'
-    }
-    if (guestNames.length > 500) errors.guestNames = 'Please keep this under 500 characters.'
-    if (dietaryRequirements.length > 1000) errors.dietaryRequirements = 'Please keep this under 1000 characters.'
-    if (songRequest.length > 300) errors.songRequest = 'Please keep this under 300 characters.'
-    if (message.length > 2000) errors.message = 'Please keep this under 2000 characters.'
-    return errors
-  }
-
-  const fieldRefsByName: Record<FieldName, React.RefObject<HTMLElement | null>> = {
+  const fieldRefs: Record<FieldName, React.RefObject<HTMLElement | null>> = {
     guestName: guestNameRef,
     attending: attendingRef,
     partySize: partySizeRef,
@@ -88,20 +72,37 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
     message: messageRef,
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  function validate() {
+    const errors: Partial<Record<FieldName, string>> = {}
+    if (!guestName.trim()) errors.guestName = 'Please enter your name.'
+    else if (guestName.trim().length > 200) errors.guestName = 'That name is a little too long.'
+    if (!attending) errors.attending = 'Please let us know if you can make it.'
+    if (attending === 'yes' && (!Number.isInteger(partySize) || partySize < 1 || partySize > 10)) errors.partySize = 'Enter a number between 1 and 10.'
+    if (guestNames.length > 500) errors.guestNames = 'Please keep this under 500 characters.'
+    if (dietaryRequirements.length > 1000) errors.dietaryRequirements = 'Please keep this under 1000 characters.'
+    if (songRequest.length > 300) errors.songRequest = 'Please keep this under 300 characters.'
+    if (message.length > 2000) errors.message = 'Please keep this under 2000 characters.'
+    return errors
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const errors = validate()
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length) {
       setFieldErrors(errors)
-      const firstInvalid = (Object.keys(fieldRefsByName) as FieldName[]).find((field) => errors[field])
-      if (firstInvalid) fieldRefsByName[firstInvalid].current?.focus()
+      const firstInvalid = (Object.keys(fieldRefs) as FieldName[]).find((field) => errors[field])
+      if (firstInvalid) fieldRefs[firstInvalid].current?.focus()
       return
     }
     setFieldErrors({})
 
     if (website.trim()) {
-      // Honeypot tripped — pretend to succeed, skip the network call.
       setStatus('success')
+      return
+    }
+    if (!supabaseConfigured) {
+      setStatus('error')
+      setErrorMessage('RSVP submissions are connected on the live site. Add the Vercel Supabase environment variables to .env.local to test submissions locally.')
       return
     }
 
@@ -126,160 +127,90 @@ export function RsvpModal({ onClose }: { onClose: () => void }) {
   }
 
   return createPortal(
-    <div className="rsvp-modal" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div
-        ref={panelRef}
-        className="rsvp-modal__panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="rsvp-modal-title"
-      >
-        <button type="button" className="rsvp-modal__close" onClick={onClose} aria-label="Close">×</button>
+    <div className="rsvp-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section ref={panelRef} className="rsvp-modal" role="dialog" aria-modal="true" aria-labelledby="rsvp-modal-title">
+        <button className="rsvp-modal__close" type="button" onClick={onClose} aria-label="Close RSVP form">×</button>
+        <div className="rsvp-modal__ornament" aria-hidden="true">
+          <span className="rsvp-modal__sprig rsvp-modal__sprig--left"><i><img src="/assets/floral-divider.png" alt="" /></i></span>
+          <span className="rsvp-modal__dot" />
+          <span className="rsvp-modal__sprig rsvp-modal__sprig--right"><i><img src="/assets/floral-divider.png" alt="" /></i></span>
+        </div>
 
         {status === 'success' ? (
           <div className="rsvp-modal__success">
+            <p className="rsvp-modal__eyebrow">Stuart &amp; Mandy</p>
             <h2 id="rsvp-modal-title">Thank you, {guestName.trim() || 'friend'}!</h2>
-            <p>{attending === 'yes' ? 'We can\'t wait to celebrate with you.' : 'Thanks for letting us know — you\'ll be missed.'}</p>
-            <button type="button" className="button button--solid" onClick={onClose}>Close</button>
+            <p>{attending === 'yes' ? 'We can’t wait to celebrate with you.' : 'Thank you for letting us know — you’ll be missed.'}</p>
+            <button className="button button--solid" type="button" onClick={onClose}>Close</button>
           </div>
         ) : (
-          <form className="rsvp-modal__form" onSubmit={handleSubmit} noValidate>
-            <h2 id="rsvp-modal-title">RSVP</h2>
+          <>
+            <p className="rsvp-modal__eyebrow">Stuart &amp; Mandy</p>
+            <h2 id="rsvp-modal-title">Will you join us?</h2>
 
-            <div className="rsvp-modal__honeypot" aria-hidden="true">
-              <label htmlFor="rsvp-website">Leave this field blank</label>
-              <input
-                id="rsvp-website"
-                name="website"
-                type="text"
-                tabIndex={-1}
-                autoComplete="off"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-              />
-            </div>
+            <form className="rsvp-form" onSubmit={handleSubmit} noValidate>
+              <label className="rsvp-honeypot" aria-hidden="true">
+                Website
+                <input type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+              </label>
 
-            <div className="rsvp-modal__field">
-              <label htmlFor="rsvp-name">Your name</label>
-              <input
-                id="rsvp-name"
-                ref={guestNameRef}
-                type="text"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                aria-invalid={Boolean(fieldErrors.guestName)}
-                aria-describedby={fieldErrors.guestName ? 'rsvp-name-error' : undefined}
-              />
-              {fieldErrors.guestName && <p className="rsvp-modal__error" id="rsvp-name-error">{fieldErrors.guestName}</p>}
-            </div>
+              <label className="rsvp-field rsvp-field--full">
+                <span>Your name</span>
+                <input ref={guestNameRef} type="text" autoComplete="name" value={guestName} onChange={(event) => setGuestName(event.target.value)} aria-invalid={Boolean(fieldErrors.guestName)} />
+                {fieldErrors.guestName && <small className="rsvp-field__error">{fieldErrors.guestName}</small>}
+              </label>
 
-            <fieldset className="rsvp-modal__field">
-              <legend>Will you be joining us?</legend>
-              <div className="rsvp-modal__radio-group">
-                <label>
-                  <input
-                    ref={attendingRef}
-                    type="radio"
-                    name="attending"
-                    value="yes"
-                    checked={attending === 'yes'}
-                    onChange={() => setAttending('yes')}
-                  />
-                  Joyfully attending
+              <fieldset className="rsvp-choice">
+                <legend>Will you be joining us?</legend>
+                <label><input ref={attendingRef} type="radio" name="attendance" checked={attending === 'yes'} onChange={() => setAttending('yes')} /><span>Joyfully attending</span></label>
+                <label><input type="radio" name="attendance" checked={attending === 'no'} onChange={() => setAttending('no')} /><span>Sadly can’t make it</span></label>
+                {fieldErrors.attending && <small className="rsvp-field__error rsvp-field__error--choice">{fieldErrors.attending}</small>}
+              </fieldset>
+
+              {attending === 'yes' && <>
+                <label className="rsvp-field">
+                  <span>Number in your party</span>
+                  <input ref={partySizeRef} type="number" min={1} max={10} value={partySize} onChange={(event) => setPartySize(Number(event.target.value))} aria-invalid={Boolean(fieldErrors.partySize)} />
+                  {fieldErrors.partySize && <small className="rsvp-field__error">{fieldErrors.partySize}</small>}
                 </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="attending"
-                    value="no"
-                    checked={attending === 'no'}
-                    onChange={() => setAttending('no')}
-                  />
-                  Sadly can't make it
+                <label className="rsvp-field">
+                  <span>Names of guests joining you</span>
+                  <textarea ref={guestNamesRef} rows={2} value={guestNames} onChange={(event) => setGuestNames(event.target.value)} placeholder="Please include everyone in your party" />
+                  {fieldErrors.guestNames && <small className="rsvp-field__error">{fieldErrors.guestNames}</small>}
                 </label>
+                <label className="rsvp-field">
+                  <span>Dietary requirements <i>Optional</i></span>
+                  <textarea ref={dietaryRequirementsRef} rows={2} value={dietaryRequirements} onChange={(event) => setDietaryRequirements(event.target.value)} placeholder="Allergies or dietary requirements" />
+                  {fieldErrors.dietaryRequirements && <small className="rsvp-field__error">{fieldErrors.dietaryRequirements}</small>}
+                </label>
+                <label className="rsvp-field">
+                  <span>Song request <i>Optional</i></span>
+                  <input ref={songRequestRef} type="text" value={songRequest} onChange={(event) => setSongRequest(event.target.value)} placeholder="A song to bring you to the dance floor" />
+                  {fieldErrors.songRequest && <small className="rsvp-field__error">{fieldErrors.songRequest}</small>}
+                </label>
+              </>}
+
+              {attending && (
+                <label className="rsvp-field rsvp-field--full">
+                  <span>A message for Stuart &amp; Mandy <i>Optional</i></span>
+                  <textarea ref={messageRef} rows={2} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Anything else you’d like us to know" />
+                  {fieldErrors.message && <small className="rsvp-field__error">{fieldErrors.message}</small>}
+                </label>
+              )}
+
+              <div className="rsvp-form__footer">
+                <p className={status === 'error' ? 'rsvp-form__error' : ''} aria-live="polite">
+                  {status === 'error' ? errorMessage : 'Your RSVP will be sent securely to Stuart and Mandy.'}
+                </p>
+                <button className="button button--solid" type="submit" disabled={status === 'submitting'}>
+                  {status === 'submitting' ? 'Sending…' : 'Send RSVP'} <span aria-hidden="true">→</span>
+                </button>
               </div>
-              {fieldErrors.attending && <p className="rsvp-modal__error">{fieldErrors.attending}</p>}
-            </fieldset>
-
-            {attending === 'yes' && (
-              <>
-                <div className="rsvp-modal__field">
-                  <label htmlFor="rsvp-party-size">Number in your party (including you)</label>
-                  <input
-                    id="rsvp-party-size"
-                    ref={partySizeRef}
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={partySize}
-                    onChange={(e) => setPartySize(Number(e.target.value))}
-                    aria-invalid={Boolean(fieldErrors.partySize)}
-                    aria-describedby={fieldErrors.partySize ? 'rsvp-party-size-error' : undefined}
-                  />
-                  {fieldErrors.partySize && <p className="rsvp-modal__error" id="rsvp-party-size-error">{fieldErrors.partySize}</p>}
-                </div>
-
-                <div className="rsvp-modal__field">
-                  <label htmlFor="rsvp-guest-names">Names of the guests joining you</label>
-                  <textarea
-                    id="rsvp-guest-names"
-                    ref={guestNamesRef}
-                    rows={2}
-                    value={guestNames}
-                    onChange={(e) => setGuestNames(e.target.value)}
-                  />
-                  {fieldErrors.guestNames && <p className="rsvp-modal__error">{fieldErrors.guestNames}</p>}
-                </div>
-
-                <div className="rsvp-modal__field">
-                  <label htmlFor="rsvp-dietary">Dietary requirements or allergies</label>
-                  <textarea
-                    id="rsvp-dietary"
-                    ref={dietaryRequirementsRef}
-                    rows={2}
-                    value={dietaryRequirements}
-                    onChange={(e) => setDietaryRequirements(e.target.value)}
-                  />
-                  {fieldErrors.dietaryRequirements && <p className="rsvp-modal__error">{fieldErrors.dietaryRequirements}</p>}
-                </div>
-
-                <div className="rsvp-modal__field">
-                  <label htmlFor="rsvp-song">A song to bring you to the dance floor</label>
-                  <input
-                    id="rsvp-song"
-                    ref={songRequestRef}
-                    type="text"
-                    value={songRequest}
-                    onChange={(e) => setSongRequest(e.target.value)}
-                  />
-                  {fieldErrors.songRequest && <p className="rsvp-modal__error">{fieldErrors.songRequest}</p>}
-                </div>
-              </>
-            )}
-
-            <div className="rsvp-modal__field">
-              <label htmlFor="rsvp-message">A message for Stuart &amp; Mandy (optional)</label>
-              <textarea
-                id="rsvp-message"
-                ref={messageRef}
-                rows={3}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-              {fieldErrors.message && <p className="rsvp-modal__error">{fieldErrors.message}</p>}
-            </div>
-
-            {status === 'error' && <p className="rsvp-modal__error rsvp-modal__error--form">{errorMessage}</p>}
-
-            <div className="rsvp-modal__actions">
-              <button type="submit" className="button button--solid" disabled={status === 'submitting'}>
-                {status === 'submitting' ? 'Sending…' : 'Send RSVP'}
-              </button>
-            </div>
-          </form>
+            </form>
+          </>
         )}
-      </div>
+      </section>
     </div>,
-    document.body
+    document.body,
   )
 }
