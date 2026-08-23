@@ -12,7 +12,7 @@ type ItineraryItem = {
 
 const CEREMONY_ITINERARY: ItineraryItem[] = [
   {
-    time: '2:00pm',
+    time: '2:30pm',
     title: 'Guests arrive and park',
     body: 'Please allow a little extra time to find considerate parking within Stogursey and make your way to the church.',
   },
@@ -24,7 +24,7 @@ const CEREMONY_ITINERARY: ItineraryItem[] = [
   {
     time: '3:00pm',
     title: 'Wedding ceremony',
-    body: 'Stuart and Mandy exchange vows at St Andrew’s Church.',
+    body: 'Stuart and Mandy exchange vows at St Andrew’s Church, with music from soloist Sophia Aira.',
   },
   {
     time: '3:45pm',
@@ -41,13 +41,18 @@ const RECEPTION_ITINERARY: ItineraryItem[] = [
   },
   {
     time: '4:30pm',
-    title: 'Reception drinks',
-    body: 'Join us for a drink on arrival at Greenway Farm. This start time is provisional until the ceremony schedule is confirmed.',
+    title: 'Canapés, drinks and live music',
+    body: 'Join us for canapés and drinks on arrival at Greenway Farm, with music from soloist Sophia Aira. This start time is provisional until the ceremony schedule is confirmed.',
   },
   {
-    time: 'To be confirmed',
-    title: 'Dinner, speeches and dancing',
-    body: 'We’re still refining the evening timings with our families and suppliers.',
+    time: '5:00pm',
+    title: 'Hot buffet, fun and dancing',
+    body: 'Enjoy the hot buffet before the dancing begins. Way Back Wayne will be playing from 7:30pm through to the end of the evening.',
+  },
+  {
+    time: '11:30pm',
+    title: 'Evening finishes',
+    body: 'The celebrations at Greenway Farm come to a close.',
   },
 ]
 
@@ -258,10 +263,10 @@ function WeddingSite({ footerCtaEnabled = false, footerFlowersEnabled = true, mo
           title="The reception"
           name="Greenway Farm"
           address="Skimmerton Lane, Wembdon, TA5 2AX"
-          copy={<p>After the ceremony, celebrations will continue at Greenway Farm in Wembdon. Please allow approximately 20 minutes for the drive from Stogursey. The farm is reached from the A39 via Skimmerton Lane, beside the service station between Bridgwater and Cannington. We recommend arranging lifts or pre-booking a taxi in advance.</p>}
+          copy={<><p>After the ceremony, celebrations will continue at Greenway Farm in Wembdon. Please allow approximately 20 minutes for the drive from Stogursey. The farm is reached from the A39 via Skimmerton Lane, beside the service station between Bridgwater and Cannington.</p><p>We recommend arranging lifts or pre-booking a taxi in advance. For local taxi firm recommendations, please check Stogursey Pulse.</p></>}
           image="/assets/reception-photo.png"
           itinerary={RECEPTION_ITINERARY}
-          itineraryNote="Timings from the end of the ceremony onward remain subject to confirmation."
+          itineraryNote="Reception arrival timings remain subject to the final ceremony schedule."
         />
 
         <section className="stay-section" id="stay">
@@ -300,6 +305,7 @@ function WeddingSite({ footerCtaEnabled = false, footerFlowersEnabled = true, mo
           <p className="section-intro">Please reply using the form below. You can confirm who is attending, share dietary requirements, request a song for the dance floor and leave us a message.</p>
           <button className="button button--solid" type="button" onClick={() => setRsvpOpen(true)}>Reply to our invitation</button>
         </section>
+        <footer className="site-credit">made with <span aria-label="love">♥</span> by Joseph and Maddie</footer>
         {footerCtaEnabled && <MobileFooterCta showFlowers={footerFlowersEnabled} onClick={() => setRsvpOpen(true)} />}
       </div>
       {rsvpOpen && <RsvpModal onClose={() => setRsvpOpen(false)} />}
