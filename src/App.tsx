@@ -263,7 +263,7 @@ function WeddingSite({ footerCtaEnabled = false, footerFlowersEnabled = true, mo
           title="The reception"
           name="Greenway Farm"
           address="Skimmerton Lane, Wembdon, TA5 2AX"
-          copy={<><p>After the ceremony, celebrations will continue at Greenway Farm in Wembdon. Please allow approximately 20 minutes for the drive from Stogursey. The farm is reached from the A39 via Skimmerton Lane, beside the service station between Bridgwater and Cannington.</p><p>We recommend arranging lifts or pre-booking a taxi in advance. For local taxi firm recommendations, please check Stogursey Pulse.</p></>}
+          copy={<><p>After the ceremony, celebrations will continue at Greenway Farm in Wembdon. Please allow approximately 20 minutes for the drive from Stogursey. The farm is reached from the A39 via Skimmerton Lane, beside the service station between Bridgwater and Cannington.</p><p>We recommend arranging lifts or pre-booking a taxi in advance.</p></>}
           image="/assets/reception-photo.png"
           itinerary={RECEPTION_ITINERARY}
           itineraryNote="Reception arrival timings remain subject to the final ceremony schedule."
