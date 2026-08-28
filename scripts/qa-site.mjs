@@ -63,7 +63,7 @@ async function openSite(viewport, name) {
       noProvisionalTag: provisionalTagCount === 0,
       updatedArrival: content.includes('2:30pm') && !content.includes('2:00pm'),
       receptionCanapes: content.includes('canapés and drinks on arrival at Greenway Farm'),
-      receptionMusic: content.includes('music from soloist Sophia Aira'),
+      receptionMusic: content.includes('music from soloist Sofia Aira'),
       hotBuffetAndDancing: content.includes('5:00pm') && content.includes('Hot buffet, fun and dancing') && !content.includes('Dinner, speeches and dancing'),
       djTiming: content.includes('playing from 7:30pm') && content.includes('Way Back Wayne'),
       finishTime: content.includes('11:30pm') && content.includes('Evening finishes'),

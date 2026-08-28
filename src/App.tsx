@@ -24,7 +24,7 @@ const CEREMONY_ITINERARY: ItineraryItem[] = [
   {
     time: '3:00pm',
     title: 'Wedding ceremony',
-    body: 'Stuart and Mandy exchange vows at St Andrew’s Church, with music from soloist Sophia Aira.',
+    body: 'Stuart and Mandy exchange vows at St Andrew’s Church, with music from soloist Sofia Aira.',
   },
   {
     time: '3:45pm',
@@ -42,7 +42,7 @@ const RECEPTION_ITINERARY: ItineraryItem[] = [
   {
     time: '4:30pm',
     title: 'Canapés, drinks and live music',
-    body: 'Join us for canapés and drinks on arrival at Greenway Farm, with music from soloist Sophia Aira. This start time is provisional until the ceremony schedule is confirmed.',
+    body: 'Join us for canapés and drinks on arrival at Greenway Farm, with music from soloist Sofia Aira. This start time is provisional until the ceremony schedule is confirmed.',
   },
   {
     time: '5:00pm',
